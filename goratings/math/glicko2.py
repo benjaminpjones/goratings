@@ -35,11 +35,9 @@ class Glicko2Entry:
         self.phi = self.deviation / GLICKO2_SCALE
 
     def __str__(self) -> str:
-        return "%7.2f +- %6.2f (%.6f [%.4f])" % (
+        return "%7.2f +- %6.2f" % (
             self.rating,
             self.deviation,
-            self.volatility,
-            self.volatility * GLICKO2_SCALE,
         )
 
     def copy(self, rating_adjustment: float = 0.0, rd_adjustment: float = 0.0) -> "Glicko2Entry":
