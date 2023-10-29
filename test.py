@@ -45,9 +45,68 @@ for i in range(290):
     user2 = glicko2_update(user2, [(Glicko2Entry(rating=user2.rating, deviation=65), result)])
     print(user2)
 
+def rand_result(winrate):
+    return choices([1, 0], [winrate, 1-winrate])[0]
 
-plt.plot(ranks)
-plt.plot(ranks2)
+def simulate(result_function):
+    """Returns a list of ranks that corresponds to the results in games
+    result_function takes the game info and returns (opponent, result)
+    """
+
+    user = Glicko2Entry(START_RANK, START_DEVIATION)
+    ranks = []
+    for i in range(300):
+        rating = user.rating
+        rank = rating_to_rank(rating)
+        ranks.append(rank)
+
+        game_info = {}
+        game_info["rank"] = rank
+        game_info["rating"] = rating
+        game_info["i"] = i
+
+        result = result_function(game_info)
+
+        user = glicko2_update(user, [result])
+    return ranks
+
+def winrate(rank1, rank2):
+    rating1, rating2 = rank_to_rating(rank1), rank_to_rating(rank2)
+    odds = 10 ** (abs(rating1 - rating2) / 400)
+    if rating1 > rating2:
+        return odds / (odds + 1)
+    else:
+        return 1 / (odds + 1)
+
+def only_plays_5k_and_never_wins(game_info):
+    rating_5k = rank_to_rating(25)
+    return (Glicko2Entry(rating_5k, 65), 0)
+
+def plays_5k_and_wins_occasionally(game_info):
+    rating_5k = rank_to_rating(25)
+    return (Glicko2Entry(rating_5k, 65), rand_result(winrate(5, 25)))
+
+def plays_proper_matches(game_info):
+    rank = game_info["rank"]
+    result = rand_result(winrate(5, rank))
+    return (Glicko2Entry(game_info["rating"], 65), result)
+
+def wins_a_few_at_the_start(game_info):
+    i = game_info["i"]
+    if i < 3:
+        return (Glicko2Entry(game_info["rating"], 65), 1)
+    else:
+        return plays_proper_matches(game_info)
+
+result_functions = [
+    only_plays_5k_and_never_wins,
+    plays_proper_matches,
+    wins_a_few_at_the_start,
+    plays_5k_and_wins_occasionally,
+]
+
+for f in result_functions:
+    plt.plot(simulate(f))
 plt.show()
 
 print(rating_to_rank(400))
