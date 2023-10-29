@@ -17,6 +17,8 @@ def rating_to_rank(rating):
 RATING_5K = rank_to_rating(25)
 RATING_25K = rank_to_rating(5)
 
+N_GAMES = 100
+
 def rand_result(winrate):
     return choices([1, 0], [winrate, 1-winrate])[0]
 
@@ -27,7 +29,7 @@ def simulate(result_function):
 
     user = Glicko2Entry(START_RANK, START_DEVIATION)
     ranks = []
-    for i in range(300):
+    for i in range(N_GAMES):
         rating = user.rating
         rank = rating_to_rank(rating)
         ranks.append(rank)
@@ -68,21 +70,32 @@ def wins_a_few_at_the_start(game_info):
     else:
         return plays_proper_matches(game_info)
 
+def plays_x_stones_stronger(stones):
+    def f(game_info):
+        rank = game_info["rank"]
+        rank = rank + stones
+        rating = rank_to_rating(rank)
+        result = rand_result(winrate(RATING_25K, rating))
+        return (Glicko2Entry(rating, 65), result)
+    return f
+
 def simulate_averaged(f):
     """Just like simulate, but attempts to mitigate randomness through averaging"""
     trials = 100
-    rank_totals = [0] * 300
+    rank_totals = [0] * N_GAMES
     for i in range(trials):
         ranks = simulate(f)
-        for i in range(300):
+        for i in range(N_GAMES):
             rank_totals[i] += ranks[i]
     return [ tot / trials for tot in rank_totals ]
 
 result_functions = [
     # only_plays_5k_and_never_wins,
-    ("Plays proper rank", plays_proper_matches),
-    ("Wins 3 at start", wins_a_few_at_the_start),
-    ("Plays only 5k", plays_5k_and_wins_occasionally),
+    ("Even matchups only", plays_proper_matches),
+    # ("Wins 3 at start", wins_a_few_at_the_start),
+    ("Plays only 5k (impossible)", plays_5k_and_wins_occasionally),
+    ("Plays 9 stones up", plays_x_stones_stronger(9)),
+    ("Plays 5 stones up", plays_x_stones_stronger(5)),
 ]
 
 
@@ -92,11 +105,19 @@ for f in result_functions:
 
 @mticker.FuncFormatter
 def kyu_formatter(rank, pos):
-    return f"{int(30-rank)}k"
+    return f"{30-rank:.1f}k"
 
 plt.gca().yaxis.set_major_formatter(kyu_formatter)
+plt.yticks([0, 5, 10, 15, 20])
 plt.gca().legend()
+ 
+plt.axhline(y = 8, color = 'b', linestyle = ':', label = "20k") 
+plt.axhline(y = 5, color = 'r', linestyle = '--', label = "25k") 
 
+plt.ylim(0, 22)
+plt.xlim(0, N_GAMES)
+  
 plt.show()
 
 print(rating_to_rank(400))
+print(winrate(RATING_5K, RATING_25K))
