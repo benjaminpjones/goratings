@@ -17,7 +17,7 @@ def rating_to_rank(rating):
 RATING_5K = rank_to_rating(25)
 RATING_25K = rank_to_rating(5)
 
-N_GAMES = 100
+N_GAMES = 50
 
 def rand_result(winrate):
     return choices([1, 0], [winrate, 1-winrate])[0]
@@ -54,9 +54,11 @@ def winrate(rating1, rating2):
 def only_plays_5k_and_never_wins(game_info):
     return (Glicko2Entry(RATING_5K, 65), 0)
 
-def plays_5k_and_wins_occasionally(game_info):
-    rating_5k = rank_to_rating(25)
-    return (Glicko2Entry(RATING_5K, 65), rand_result(winrate(RATING_25K, RATING_5K)))
+def plays_x_rank_only(rank):
+    RATING = rank_to_rating(rank)
+    def f(game_info):
+        return (Glicko2Entry(RATING, 65), rand_result(winrate(RATING_25K, RATING)))
+    return f
 
 def plays_proper_matches(game_info):
     rating = game_info["rating"]
@@ -81,7 +83,7 @@ def plays_x_stones_stronger(stones):
 
 def simulate_averaged(f):
     """Just like simulate, but attempts to mitigate randomness through averaging"""
-    trials = 100
+    trials = 500
     rank_totals = [0] * N_GAMES
     for i in range(trials):
         ranks = simulate(f)
@@ -93,9 +95,10 @@ result_functions = [
     # only_plays_5k_and_never_wins,
     ("Even matchups only", plays_proper_matches),
     # ("Wins 3 at start", wins_a_few_at_the_start),
-    ("Plays only 5k (impossible)", plays_5k_and_wins_occasionally),
-    ("Plays 9 stones up", plays_x_stones_stronger(9)),
-    ("Plays 5 stones up", plays_x_stones_stronger(5)),
+    # ("Plays only 5k (impossible)", plays_x_rank_only(25)),
+    ("Plays 9 stones down", plays_x_stones_stronger(-9)),
+    ("Plays only 25k (impossible)", plays_x_rank_only(5)),
+    # ("Plays 5 stones up", plays_x_stones_stronger(5)),
 ]
 
 
